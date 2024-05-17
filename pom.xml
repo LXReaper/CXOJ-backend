@@ -116,6 +116,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.qiniu</groupId>
+            <artifactId>qiniu-java-sdk</artifactId>
+            <version>7.7.0</version> <!-- 版本号可以根据需要进行调整 -->
+        </dependency>
     </dependencies>
 
     <build>

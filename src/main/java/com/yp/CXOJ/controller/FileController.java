@@ -10,6 +10,7 @@ import com.yp.CXOJ.manager.CosManager;
 import com.yp.CXOJ.model.dto.file.UploadFileRequest;
 import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.enums.FileUploadBizEnum;
+import com.yp.CXOJ.service.QiNiuService;
 import com.yp.CXOJ.service.UserService;
 import java.io.File;
 import java.util.Arrays;
@@ -17,10 +18,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -34,6 +32,9 @@ public class FileController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private QiNiuService qiNiuService;
 
     @Resource
     private CosManager cosManager;
@@ -102,5 +103,11 @@ public class FileController {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件类型错误");
             }
         }
+    }
+
+
+    @PostMapping("/fileUpload")
+    public BaseResponse<Boolean> filesUpload(@RequestParam("fileName") MultipartFile file , String fileType){
+        return ResultUtils.success(qiNiuService.uploadQiNiu(file,fileType));
     }
 }
