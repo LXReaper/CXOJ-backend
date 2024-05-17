@@ -1,6 +1,5 @@
 package com.yp.CXOJ.judge.codesandbox.model;
 
-import com.yp.CXOJ.model.dto.questionsubmit.JudgeInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

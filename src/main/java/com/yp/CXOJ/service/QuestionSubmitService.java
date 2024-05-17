@@ -13,6 +13,7 @@ import com.yp.CXOJ.model.vo.QuestionSubmitVO;
 import com.yp.CXOJ.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author 余炎培
@@ -55,4 +56,27 @@ public interface QuestionSubmitService extends IService<QuestionSubmit> {
      * @return
      */
     Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser);
+
+
+    /**
+     * 将questionSubmitList中的所有数据脱敏
+     * @param questionSubmitList
+     * @return
+     */
+    List<QuestionSubmitVO> getQuestionSubmitVOList(List<QuestionSubmit> questionSubmitList);
+
+
+    /**
+     * 获取userId的题目提交记录(本人或者管理员可见)
+     * @param userId
+     * @return
+     */
+    List<QuestionSubmit> getQuestionSubmitListByUserId(long userId,HttpServletRequest request);
+
+    /**
+     * 获取userId的题目提交记录(所有用户可见)
+     * @param userId
+     * @return
+     */
+    List<QuestionSubmitVO> getQuestionSubmitVOListByUserId(long userId,HttpServletRequest request);
 }

@@ -17,17 +17,14 @@ import com.yp.CXOJ.model.vo.QuestionSubmitVO;
 import com.yp.CXOJ.service.QuestionSubmitService;
 import com.yp.CXOJ.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目提交接口
- *
  */
 @RestController
 @RequestMapping("/question_submit")
@@ -49,7 +46,7 @@ public class QuestionSubmitController {
      */
     @PostMapping("/")
     public BaseResponse<Long> doQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
-            HttpServletRequest request) {
+                                               HttpServletRequest request) {
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -78,6 +75,45 @@ public class QuestionSubmitController {
         User loginUser = userService.getLoginUser(request);
 
         // 返回脱敏信息,如题目提交代码
-        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage , loginUser));
+        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage, loginUser));
+    }
+
+    /**
+     * 获取某个用户的提交信息(所有用户可见)
+     *
+     * @param id
+     * @return
+     */
+    @PostMapping("/list/QuestionSubmitVO")
+    public BaseResponse<List<QuestionSubmitVO>> listQuestionSubmitVoByUserId(Long id, HttpServletRequest request) {
+        if (id == null || id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        List<QuestionSubmitVO> questionSubmitVOList = questionSubmitService.getQuestionSubmitVOListByUserId(id, request);
+
+        // 返回脱敏信息,如题目提交代码
+        return ResultUtils.success(questionSubmitVOList);
+    }
+
+    /**
+     * 获取某个用户的提交信息(本人和管理员可见)
+     *
+     * @param id
+     * @return
+     */
+    @PostMapping("/list/QuestionSubmit")
+    public BaseResponse<List<QuestionSubmit>> listQuestionSubmitByUserId(Long id, HttpServletRequest request) {
+        if (id == null || id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        //只有本人和管理员可见
+        if (!loginUser.getId().equals(id) && !userService.isAdmin(loginUser)){
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+        List<QuestionSubmit> questionSubmitList = questionSubmitService.getQuestionSubmitListByUserId(id, request);
+
+        // 返回脱敏信息,如题目提交代码
+        return ResultUtils.success(questionSubmitList);
     }
 }

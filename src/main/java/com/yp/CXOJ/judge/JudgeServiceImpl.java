@@ -8,23 +8,18 @@ import com.yp.CXOJ.judge.codesandbox.CodeSandBoxFactory;
 import com.yp.CXOJ.judge.codesandbox.CodeSandBoxProxy;
 import com.yp.CXOJ.judge.codesandbox.model.ExecuteCodeRequest;
 import com.yp.CXOJ.judge.codesandbox.model.ExecuteCodeResponse;
+import com.yp.CXOJ.judge.strategy.JudgeContext;
 import com.yp.CXOJ.model.dto.question.JudgeCase;
-import com.yp.CXOJ.model.dto.questionsubmit.JudgeInfo;
+import com.yp.CXOJ.judge.codesandbox.model.JudgeInfo;
 import com.yp.CXOJ.model.entity.Question;
 import com.yp.CXOJ.model.entity.QuestionSubmit;
-import com.yp.CXOJ.model.enums.QuestionSubmitJudgeInfoEnum;
-import com.yp.CXOJ.model.enums.QuestionSubmitLanguageEnum;
 import com.yp.CXOJ.model.enums.QuestionSubmitStatusEnum;
-import com.yp.CXOJ.model.vo.QuestionSubmitVO;
 import com.yp.CXOJ.service.QuestionService;
 import com.yp.CXOJ.service.QuestionSubmitService;
-import org.elasticsearch.Assertions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,11 +32,14 @@ public class JudgeServiceImpl implements JudgeService {
     private QuestionService questionService;
 
     @Resource
+    private JudgeManger judgeManger;
+
+    @Resource
     private QuestionSubmitService questionSubmitService;
 
 
     @Override
-    public QuestionSubmitVO doJudge(long questionSubmitId) {
+    public QuestionSubmit doJudge(long questionSubmitId) {
         //传入题目提交ID，获取对应的题目、提交信息（包含代码、编程语言）
         //调用沙箱,获取执行结果
         //根据沙箱的执行结果，设置题目的判题状态和信息
@@ -86,28 +84,40 @@ public class JudgeServiceImpl implements JudgeService {
                 .language(language)
                 .inputList(inputList)
                 .build();
-        ExecuteCodeResponse executeCodeResponse = codeSandBox.executeCode(executeCodeRequest);
+        ExecuteCodeResponse executeCodeResponse = codeSandBox.executeCode(executeCodeRequest);//代码沙箱执行返回的内容
 
 
         //获取代码沙箱执行代码后返回的结果
         List<String> outputList = executeCodeResponse.getOutputList();
+
         /**
          * 根据沙箱的执行结果，设置题目的判题状态和信息
          * 首先初始化判题信息状态为等待中
+         * 接着以此比对代码沙箱的输出结果和实际正确代码
          */
-        QuestionSubmitJudgeInfoEnum questionSubmitJudgeInfoEnum = QuestionSubmitJudgeInfoEnum.WAITING;
-        if (outputList.size() != inputList.size()){//代码沙箱返回的输出结果数量跟原先输入用例的数量不一致，即有些输入用例没有结果
-            questionSubmitJudgeInfoEnum = QuestionSubmitJudgeInfoEnum.WRONG_ANSWER;
+        //上下文的作用
+        JudgeContext judgeContext = new JudgeContext();
+        judgeContext.setJudgeInfo(executeCodeResponse.getJudgeInfo());
+        judgeContext.setInputList(inputList);
+        judgeContext.setOutputList(outputList);
+        judgeContext.setJudgeCaseList(judgeCaseList);
+        judgeContext.setQuestion(question);
+        judgeContext.setQuestionSubmit(questionSubmit);
+
+
+        JudgeInfo judgeInfo = judgeManger.doJudge(judgeContext);
+
+
+        //到此结束判题，接着修改数据库的判题结果
+        questionSubmitUpdate = new QuestionSubmit();
+        questionSubmitUpdate.setId(questionSubmitId);
+        questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+        questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
+        update = questionSubmitService.updateById(questionSubmitUpdate);
+        if (!update){//更新失败
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR , "题目状态更新错误");
         }
-        Long id = questionSubmit.getId();
-        String judgeInfo = questionSubmit.getJudgeInfo();
-        Integer status = questionSubmit.getStatus();
-        Long userId = questionSubmit.getUserId();
-        Date createTime = questionSubmit.getCreateTime();
-        Date updateTime = questionSubmit.getUpdateTime();
-        Integer isDelete = questionSubmit.getIsDelete();
-
-
-        return null;
+        QuestionSubmit questionSubmitResult = questionSubmitService.getById(questionSubmitId);//获取最新的题目提交信息
+        return questionSubmitResult;
     }
 }

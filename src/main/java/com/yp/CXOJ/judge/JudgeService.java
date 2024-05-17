@@ -1,6 +1,6 @@
 package com.yp.CXOJ.judge;
 
-import com.yp.CXOJ.model.vo.QuestionSubmitVO;
+import com.yp.CXOJ.model.entity.QuestionSubmit;
 
 /**
  * 判题服务
@@ -11,5 +11,5 @@ public interface JudgeService {
      * @param questionSubmitId 题目提交ID
      * @return
      */
-    QuestionSubmitVO doJudge(long questionSubmitId);
+    QuestionSubmit doJudge(long questionSubmitId);
 }

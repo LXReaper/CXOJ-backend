@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yp.CXOJ.common.ErrorCode;
 import com.yp.CXOJ.constant.CommonConstant;
 import com.yp.CXOJ.exception.BusinessException;
+import com.yp.CXOJ.judge.JudgeService;
 import com.yp.CXOJ.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.yp.CXOJ.model.dto.questionsubmit.QuestionSubmitQueryRequest;
 import com.yp.CXOJ.model.entity.Question;
@@ -23,34 +24,44 @@ import com.yp.CXOJ.service.UserService;
 import com.yp.CXOJ.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
-* @author 余炎培
-* @description 针对表【question_submit(题目提交表)】的数据库操作Service实现
-* @createDate 2024-04-07 23:57:14
-*/
+ * @author 余炎培
+ * @description 针对表【question_submit(题目提交表)】的数据库操作Service实现
+ * @createDate 2024-04-07 23:57:14
+ */
 @Service
 public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper, QuestionSubmit>
-    implements QuestionSubmitService{
+        implements QuestionSubmitService {
 
     @Resource
     private QuestionService questionService;
 
     @Resource
     private UserService userService;
+
+    @Resource
+    @Lazy
+    private JudgeService judgeService;
+
+    @Resource
+    private QuestionSubmitMapper questionSubmitMapper;
     /**
      * 提交题目
      *
      * @param questionSubmitAddRequest 题目创建信息
-     * @param loginUser 当前登录用户
+     * @param loginUser                当前登录用户
      * @return
      */
     @Override
@@ -58,7 +69,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         // 校验编程语言是否合法
         String language = questionSubmitAddRequest.getLanguage();
         QuestionSubmitLanguageEnum languageEnum = QuestionSubmitLanguageEnum.getEnumByValue(language);
-        if (languageEnum == null) throw new BusinessException(ErrorCode.PARAMS_ERROR , "编程语言错误");
+        if (languageEnum == null) throw new BusinessException(ErrorCode.PARAMS_ERROR, "编程语言错误");
 
         Long questionId = questionSubmitAddRequest.getQuestionId();
         // 判断实体是否存在，根据类别获取实体
@@ -80,10 +91,16 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         questionSubmit.setJudgeInfo("{}");
         //判断是否成功保存到数据库,save为true则保存成功
         boolean save = this.save(questionSubmit);
-        if (!save) throw new BusinessException(ErrorCode.SYSTEM_ERROR , "题目提交失败");
+        if (!save) throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目提交失败");
 
-        // todo 执行判题服务
-        return questionSubmit.getId();
+        Long questionSubmitId = questionSubmit.getId();
+
+        // 执行代码沙箱判题服务
+        CompletableFuture.runAsync(() -> {
+            judgeService.doJudge(questionSubmitId);
+        });
+
+        return questionSubmitId;
     }
 
     /**
@@ -110,7 +127,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
         queryWrapper.eq(ObjectUtils.isNotEmpty(questionId), "questionId", questionId);
         queryWrapper.eq(QuestionSubmitStatusEnum.getEnumByValue(status) != null, "status", status);//可加可不加
-        queryWrapper.eq("isDelete" , false);
+        queryWrapper.eq("isDelete", false);
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
@@ -118,22 +135,24 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
     /**
      * 获取单个信息的包装类
+     *
      * @param questionSubmit 未脱敏的信息
-     * */
+     */
     @Override
     public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, User loginUser) {
         QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
         //脱敏,仅仅本人和管理员能看自己提交的代码答案
         long userId = loginUser.getId();
         //处理脱敏
-        if (userId != questionSubmit.getUserId() && !userService.isAdmin(loginUser)){
+        if (userId != questionSubmit.getUserId() && !userService.isAdmin(loginUser)) {
             questionSubmitVO.setCode(null);
         }
         return questionSubmitVO;
     }
+
     /**
      * 获取分页信息的包装类
-     * */
+     */
     @Override
     public Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser) {
         List<QuestionSubmit> questionSubmitList = questionSubmitPage.getRecords();
@@ -147,6 +166,42 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }).collect(Collectors.toList());
         questionSubmitVOPage.setRecords(questionSubmitVOList);
         return questionSubmitVOPage;
+    }
+
+    /**
+     * 将questionSubmitList中的所有数据脱敏
+     */
+    @Override
+    public List<QuestionSubmitVO> getQuestionSubmitVOList(List<QuestionSubmit> questionSubmitList) {
+        List<QuestionSubmitVO> questionSubmitVOList = new ArrayList<>();
+        for (QuestionSubmit questionSubmit : questionSubmitList) {
+            QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
+            //处理脱敏
+            questionSubmitVO.setCode(null);
+            //将questionSubmit转questionSubmitVO
+            questionSubmitVOList.add(questionSubmitVO);
+        }
+        return questionSubmitVOList;
+    }
+
+    /**
+     * 获取userId的题目提交记录（本人或者管理员可见）
+     */
+    @Override
+    public List<QuestionSubmit> getQuestionSubmitListByUserId(long userId,HttpServletRequest request) {
+        QueryWrapper<QuestionSubmit> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userId", userId);//封装满足userId的查询条件
+        List<QuestionSubmit> questionSubmitList = questionSubmitMapper.selectList(queryWrapper);
+
+        return questionSubmitList;
+    }
+
+    /**
+     * 获取userId的题目提交记录（所有用户可见）
+     */
+    @Override
+    public List<QuestionSubmitVO> getQuestionSubmitVOListByUserId(long userId,HttpServletRequest request) {
+        return getQuestionSubmitVOList(getQuestionSubmitListByUserId(userId,request));
     }
 }
 
