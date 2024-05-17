@@ -27,21 +27,21 @@ create table if not exists user
 -- 题目表
 create table if not exists question
 (
-    id         bigint auto_increment comment 'id' primary key,
-    title      varchar(512)                       null comment '标题',
-    content    text                               null comment '内容',
-    tags       varchar(1024)                      null comment '题目标签列表（json 数组）',
-    answer     text                               null comment '题目答案',
-    submitNum  int      default 0                 not null comment '题目提交数',
-    acceptedNum int     default 0                 not null comment '题目通过数',
-    JudgeCase  text                               null comment '判题用例(JSON数组)',
-    JudgeConfig text                              null comment '判题配置(JSON对象,时间空间限制)',
-    thumbNum   int      default 0                 not null comment '点赞数',
-    favourNum  int      default 0                 not null comment '收藏数',
-    userId     bigint                             not null comment '创建用户 id',
-    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete   tinyint  default 0                 not null comment '是否删除',
+    id          bigint auto_increment comment 'id' primary key,
+    title       varchar(512)                       null comment '标题',
+    content     text                               null comment '内容',
+    tags        varchar(1024)                      null comment '题目标签列表（json 数组）',
+    answer      text                               null comment '题目答案',
+    submitNum   int      default 0                 not null comment '题目提交数',
+    acceptedNum int      default 0                 not null comment '题目通过数',
+    JudgeCase   text                               null comment '判题用例(JSON数组)',
+    JudgeConfig text                               null comment '判题配置(JSON对象,时间空间限制)',
+    thumbNum    int      default 0                 not null comment '点赞数',
+    favourNum   int      default 0                 not null comment '收藏数',
+    userId      bigint                             not null comment '创建用户 id',
+    createTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete    tinyint  default 0                 not null comment '是否删除',
     index idx_userId (userId)
 ) comment '题目' collate = utf8mb4_unicode_ci;
 
@@ -60,7 +60,25 @@ create table if not exists question_submit
     isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_questionId (questionId),
     index idx_userId (userId)
-) comment '题目提交表';  -- 此处使用索引（不把字符串设为索引,对于此处两个索引,在查询语句中分别对这两个字段单独查询,提高查询效率）
+) comment '题目提交表';
+-- 此处使用索引（不把字符串设为索引,对于此处两个索引,在查询语句中分别对这两个字段单独查询,提高查询效率）
+
+-- 公告表
+CREATE TABLE Announcements
+(
+    announcement_id   bigint auto_increment PRIMARY KEY comment '公告ID',
+    announcement_type VARCHAR(256) default '比赛公告'        not null comment '公告类型',
+    title             VARCHAR(512)                           not null comment '公告标题',
+    content           TEXT                                   not null comment '公告文字',
+    image_url         VARCHAR(1024)                          null comment '公告图片',
+    user_id           bigint                                 not null comment '发布用户ID',
+    publish_date      datetime     default CURRENT_TIMESTAMP not null comment '发布日期',
+    updated_user_id   bigint                                 not null comment '更新用户ID',
+    update_date       datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新日期',
+    is_deleted        tinyint      default 0                 not null comment '是否删除',
+    foreign key (user_id) references user (id) on delete no action,
+    foreign key (updated_user_id) references user (id) on delete no action
+) comment '公告表' collate = utf8mb4_unicode_ci;
 
 -- 帖子表
 create table if not exists post
