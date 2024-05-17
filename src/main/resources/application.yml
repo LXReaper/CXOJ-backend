@@ -102,3 +102,18 @@ knife4j:
 #代码沙箱配置
 codeSandBox:
   type: example
+
+# 七 牛 云配置
+oss:
+  qiniu:
+    accessKey: 3I29nKtZ6RJs7h97YTwRlnjqT2ypz-L0PxiI-u_R
+    secretKey: hcU5zOpdA5TQBf2p5eo_bOf_GZVUqZPk3QgtFQiz
+    bucketname: cxoj-files
+    #图片文件夹名字
+    bucketPictureName: sunset-pictures
+    #图片外部访问拦截
+    domainPicture: http://qiniu-picture.xiyanyuanma.com/
+    #文件名字
+    bucketFileName: sunset-file
+    #文件外部访问拦截
+    domainFile: http://qiniu-file.xiyanyuanma.com/
