@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yp.CXOJ.mapper.AnnouncementsMapper">
+
+    <resultMap id="BaseResultMap" type="com.yp.CXOJ.model.entity.Announcements">
+            <id property="announcement_id" column="announcement_id" jdbcType="BIGINT"/>
+            <result property="announcement_type" column="announcement_type" jdbcType="VARCHAR"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="content" column="content" jdbcType="VARCHAR"/>
+            <result property="image_url" column="image_url" jdbcType="VARCHAR"/>
+            <result property="user_id" column="user_id" jdbcType="BIGINT"/>
+            <result property="publish_date" column="publish_date" jdbcType="TIMESTAMP"/>
+            <result property="updated_user_id" column="updated_user_id" jdbcType="BIGINT"/>
+            <result property="update_date" column="update_date" jdbcType="TIMESTAMP"/>
+            <result property="is_deleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        announcement_id,announcement_type,title,
+        content,image_url,user_id,
+        publish_date,updated_user_id,update_date,
+        is_deleted
+    </sql>
+</mapper>
