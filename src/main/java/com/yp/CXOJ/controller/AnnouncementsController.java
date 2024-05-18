@@ -1,5 +1,6 @@
 package com.yp.CXOJ.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yp.CXOJ.annotation.AuthCheck;
 import com.yp.CXOJ.common.BaseResponse;
@@ -20,12 +21,12 @@ import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.enums.AnnouncementTypeStatusEnum;
 import com.yp.CXOJ.model.vo.QuestionSubmitVO;
 import com.yp.CXOJ.service.AnnouncementsService;
+import com.yp.CXOJ.service.QiNiuService;
 import com.yp.CXOJ.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,13 @@ public class AnnouncementsController {
     private AnnouncementsService announcementsService;
 
     @Resource
+    private QiNiuService qiNiuService;
+
+    //我的七牛云空间文件的访问路径
+    @Value("${oss.url}")
+    private String ossUrl;
+
+    @Resource
     private UserService userService;
 
     /**
@@ -54,13 +62,12 @@ public class AnnouncementsController {
      */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Long> addAnnouncement(@RequestBody AnnouncementsAddRequest announcementsAddRequest,
+    public BaseResponse<Long> addAnnouncement(@RequestParam("file") MultipartFile multipartFile,
+                                              AnnouncementsAddRequest announcementsAddRequest,
                                               HttpServletRequest request) {
-        //判断请求是否为空，以及请求的用户id是否为空或者小于0
-        ThrowUtils.throwIf(announcementsAddRequest == null ||
-                            announcementsAddRequest.getUserId() == null ||
-                            announcementsAddRequest.getUserId() <= 0, ErrorCode.PARAMS_ERROR);
-        return ResultUtils.success(announcementsService.addAnnouncements(announcementsAddRequest));
+        //判断请求是否为空
+        ThrowUtils.throwIf(announcementsAddRequest == null, ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(announcementsService.addAnnouncements(announcementsAddRequest, multipartFile, request));
     }
 
     /**
@@ -73,7 +80,7 @@ public class AnnouncementsController {
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<Announcements>> listAnnouncementsByPage(@RequestBody AnnouncementsQueryRequest announcementsQueryRequest,
-                                                                      HttpServletRequest request) {
+                                                                     HttpServletRequest request) {
         long current = announcementsQueryRequest.getCurrent();
         long size = announcementsQueryRequest.getPageSize();
         // 从数据库中查询到原始的题目提交分页信息
@@ -87,13 +94,15 @@ public class AnnouncementsController {
     /**
      * 编辑公告信息
      *
+     * @param multipartFile
      * @param announcementsEditRequest
      * @return
      */
     @PostMapping("/edit")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> editAnnouncements(@RequestBody AnnouncementsEditRequest announcementsEditRequest, HttpServletRequest request) {
-        return ResultUtils.success(announcementsService.editAnnouncements(announcementsEditRequest,request));
+    public BaseResponse<Boolean> editAnnouncements(@RequestParam("file") MultipartFile multipartFile,
+                                                   AnnouncementsEditRequest announcementsEditRequest, HttpServletRequest request) {
+        return ResultUtils.success(announcementsService.editAnnouncements(announcementsEditRequest, multipartFile, request));
     }
 
     /**
@@ -106,6 +115,14 @@ public class AnnouncementsController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteAnnouncements(Long announcement_id, HttpServletRequest request) {
         ThrowUtils.throwIf(announcement_id == null || announcement_id <= 0, ErrorCode.PARAMS_ERROR);
+        //查询该公告
+        QueryWrapper<Announcements> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("announcement_id", announcement_id);
+        Announcements announcements = announcementsService.getOne(queryWrapper);
+        if (announcements.getImage_url() != null && !announcements.getImage_url().isEmpty()){//有公告图片才删除
+            //新图片路径获取成功后才删除原来的图片文件(删除前先拿到存放在七牛云服务器中的文件名,通过文件路径拿到)
+            qiNiuService.deleteFileOnQiNiu(announcements.getImage_url().substring(ossUrl.length()));
+        }
         boolean b = announcementsService.removeById(announcement_id);
         return ResultUtils.success(b);
     }

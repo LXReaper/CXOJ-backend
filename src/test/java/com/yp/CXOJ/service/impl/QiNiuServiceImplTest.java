@@ -3,6 +3,7 @@ package com.yp.CXOJ.service.impl;
 import com.google.gson.Gson;
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
+import com.qiniu.storage.BucketManager;
 import com.qiniu.storage.Configuration;
 import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
@@ -36,6 +37,7 @@ class QiNiuServiceImplTest {
         //拿到上传文件名称
         String originalFilename = multipartFile.getOriginalFilename();
         ThrowUtils.throwIf(StringUtils.isAnyBlank(originalFilename), ErrorCode.PARAMS_ERROR, "文件名称无效");
+
 
         /**
          * 上传七牛云服务器的操作
@@ -75,4 +77,23 @@ class QiNiuServiceImplTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    public void deleteFileOnQiNiu() {
+        String fileName = "Vmake-1705315969.png";
+        //Region指定数据存储区域，autoRegion()自动根据七牛云账号找到选的区域
+        Configuration cfg = new Configuration(Region.autoRegion());
+        cfg.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V2;// 指定分片上传版本
+
+        Auth auth = Auth.create(accessKey, secretKey);//创建凭证
+        BucketManager bucketManager = new BucketManager(auth, cfg);
+        try {
+            bucketManager.delete(bucket, fileName);
+        } catch (QiniuException ex) {
+            //如果遇到异常，说明删除失败
+            System.out.println(ex.code());
+            System.out.println(ex.response.toString());
+        }
+    }
+
 }

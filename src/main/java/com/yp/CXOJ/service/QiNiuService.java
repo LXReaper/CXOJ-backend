@@ -12,7 +12,15 @@ public interface QiNiuService {
      * 上传到七牛云服务器
      * @param multipartFile
      * @param fileType
+     * @param filePrefix
      * @return
      */
-    Boolean uploadQiNiu(MultipartFile multipartFile, String fileType);
+    String uploadQiNiu(MultipartFile multipartFile, String fileType,String filePrefix);
+
+    /**
+     * 删除七牛云服务器中的文件
+     * @param fileName
+     * @return
+     */
+    Boolean deleteFileOnQiNiu(String fileName);
 }

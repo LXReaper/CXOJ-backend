@@ -7,15 +7,18 @@ import com.yp.CXOJ.common.ResultUtils;
 import com.yp.CXOJ.constant.FileConstant;
 import com.yp.CXOJ.exception.BusinessException;
 import com.yp.CXOJ.manager.CosManager;
+import com.yp.CXOJ.model.dto.file.FileUploadRequest;
 import com.yp.CXOJ.model.dto.file.UploadFileRequest;
 import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.enums.FileUploadBizEnum;
 import com.yp.CXOJ.service.QiNiuService;
 import com.yp.CXOJ.service.UserService;
+
 import java.io.File;
 import java.util.Arrays;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 文件接口
- *
  */
 @RestController
 @RequestMapping("/file")
@@ -49,7 +51,7 @@ public class FileController {
      */
     @PostMapping("/upload")
     public BaseResponse<String> uploadFile(@RequestPart("file") MultipartFile multipartFile,
-            UploadFileRequest uploadFileRequest, HttpServletRequest request) {
+                                           UploadFileRequest uploadFileRequest, HttpServletRequest request) {
         String biz = uploadFileRequest.getBiz();
         FileUploadBizEnum fileUploadBizEnum = FileUploadBizEnum.getEnumByValue(biz);
         if (fileUploadBizEnum == null) {
@@ -106,8 +108,15 @@ public class FileController {
     }
 
 
+    /**
+     * 文件上传七牛云的接口
+     * @param file
+     * @param fileUploadRequest
+     * @return
+     */
     @PostMapping("/fileUpload")
-    public BaseResponse<Boolean> filesUpload(@RequestParam("fileName") MultipartFile file , String fileType){
-        return ResultUtils.success(qiNiuService.uploadQiNiu(file,fileType));
+    public BaseResponse<String> filesUpload(@RequestParam("file") MultipartFile file, FileUploadRequest fileUploadRequest) {
+        return ResultUtils.success(qiNiuService.uploadQiNiu(file, fileUploadRequest.getFileType(),
+                fileUploadRequest.getFilePrefix()));
     }
 }

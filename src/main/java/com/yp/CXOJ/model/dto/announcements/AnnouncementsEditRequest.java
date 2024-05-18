@@ -34,10 +34,5 @@ public class AnnouncementsEditRequest implements Serializable {
      */
     private String content;
 
-    /**
-     * 公告图片
-     */
-    private String image_url;
-
     private static final long serialVersionUID = 1L;
 }

@@ -5,21 +5,25 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yp.CXOJ.common.ErrorCode;
 import com.yp.CXOJ.constant.CommonConstant;
+import com.yp.CXOJ.constant.File.FilesConstant;
 import com.yp.CXOJ.exception.ThrowUtils;
 import com.yp.CXOJ.model.dto.announcements.AnnouncementsAddRequest;
 import com.yp.CXOJ.model.dto.announcements.AnnouncementsEditRequest;
 import com.yp.CXOJ.model.dto.announcements.AnnouncementsQueryRequest;
+import com.yp.CXOJ.model.dto.file.FileUploadRequest;
 import com.yp.CXOJ.model.entity.Announcements;
-import com.yp.CXOJ.model.entity.Question;
 import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.enums.AnnouncementTypeStatusEnum;
 import com.yp.CXOJ.service.AnnouncementsService;
 import com.yp.CXOJ.mapper.AnnouncementsMapper;
+import com.yp.CXOJ.service.QiNiuService;
 import com.yp.CXOJ.service.UserService;
 import com.yp.CXOJ.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -37,25 +41,41 @@ public class AnnouncementsServiceImpl extends ServiceImpl<AnnouncementsMapper, A
     @Resource
     private UserService userService;
 
+    @Resource
+    private QiNiuService qiNiuService;
+
+    @Value("${oss.url}")
+    private String ossUrl;
+
     /**
      * 添加公告
      *
      * @param announcementsAddRequest
+     * @param multipartFile
+     * @param request
      * @return
      */
     @Override
-    public Long addAnnouncements(AnnouncementsAddRequest announcementsAddRequest) {
+    public Long addAnnouncements(AnnouncementsAddRequest announcementsAddRequest, MultipartFile multipartFile, HttpServletRequest request) {
         String announcement_type = announcementsAddRequest.getAnnouncement_type();
         String title = announcementsAddRequest.getTitle();
         String content = announcementsAddRequest.getContent();
-        String image_url = announcementsAddRequest.getImage_url();
-        Long userId = announcementsAddRequest.getUserId();
+        Long loginUserId = userService.getLoginUser(request).getId();
 
+        ThrowUtils.throwIf(loginUserId == null || loginUserId <= 0, ErrorCode.PARAMS_ERROR);
+
+        //判断是否有效
         ThrowUtils.throwIf(StringUtils.isAnyBlank(announcement_type), ErrorCode.PARAMS_ERROR, "公告类型不能为空");
         ThrowUtils.throwIf(AnnouncementTypeStatusEnum.getEnumByValue(announcement_type) == null, ErrorCode.PARAMS_ERROR, "公告类型不正确");
         ThrowUtils.throwIf(StringUtils.isAnyBlank(title), ErrorCode.PARAMS_ERROR, "公告标题不能为空");
         ThrowUtils.throwIf(StringUtils.isAnyBlank(content), ErrorCode.PARAMS_ERROR, "公告内容不能为空");
 
+        //获得图片的url
+        String image_url = "";
+        if (multipartFile != null && !multipartFile.isEmpty()) {
+            image_url = qiNiuService.uploadQiNiu(multipartFile,
+                    FilesConstant.IMAGE, FilesConstant.ANNOUNCEMENTS_IMAGE_FILES);
+        }
 
         Date curDate = new Date(System.currentTimeMillis());
         Announcements announcements = Announcements.builder()
@@ -63,9 +83,9 @@ public class AnnouncementsServiceImpl extends ServiceImpl<AnnouncementsMapper, A
                 .title(title)
                 .content(content)
                 .image_url(image_url)
-                .user_id(userId)
+                .user_id(loginUserId)
                 .publish_date(curDate)
-                .updated_user_id(userId)
+                .updated_user_id(loginUserId)
                 .update_date(curDate)
                 .build();
         boolean save = this.save(announcements);
@@ -75,8 +95,15 @@ public class AnnouncementsServiceImpl extends ServiceImpl<AnnouncementsMapper, A
         return newAnnouncementId;
     }
 
+    /**
+     * 编辑公告
+     * @param announcementsEditRequest
+     * @param multipartFile
+     * @param request
+     * @return
+     */
     @Override
-    public Boolean editAnnouncements(AnnouncementsEditRequest announcementsEditRequest,HttpServletRequest request) {
+    public Boolean editAnnouncements(AnnouncementsEditRequest announcementsEditRequest,MultipartFile multipartFile, HttpServletRequest request) {
         //如果不存在请求编辑的公告
         ThrowUtils.throwIf(announcementsEditRequest == null ||
                 announcementsEditRequest.getAnnouncement_id() <= 0, ErrorCode.PARAMS_ERROR);
@@ -86,9 +113,18 @@ public class AnnouncementsServiceImpl extends ServiceImpl<AnnouncementsMapper, A
         String announcement_type = announcementsEditRequest.getAnnouncement_type();
         String title = announcementsEditRequest.getTitle();
         String content = announcementsEditRequest.getContent();
-        String image_url = announcementsEditRequest.getImage_url();
         //拿到数据库中需要编辑的公告数据
         Announcements announcements = this.getById(announcement_id);
+        ThrowUtils.throwIf(announcements == null || announcements.getAnnouncement_id() <= 0, ErrorCode.NOT_FOUND_ERROR);
+
+        String image_url = null;
+        if (multipartFile != null && !multipartFile.isEmpty()) {
+            //先拿到新图片路径
+            image_url = qiNiuService.uploadQiNiu(multipartFile,
+                    FilesConstant.IMAGE, FilesConstant.ANNOUNCEMENTS_IMAGE_FILES);
+            //新图片路径获取成功后才删除原来的图片文件(删除前先拿到存放在七牛云服务器中的文件名,通过文件路径拿到)
+            qiNiuService.deleteFileOnQiNiu(announcements.getImage_url().substring(ossUrl.length()));
+        }
 
         //设置公告类型
         if (announcement_type != null && !announcement_type.equals("")

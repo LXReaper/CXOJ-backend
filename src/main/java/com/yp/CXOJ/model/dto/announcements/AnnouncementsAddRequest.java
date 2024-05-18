@@ -1,6 +1,7 @@
 package com.yp.CXOJ.model.dto.announcements;
 
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.Serializable;
 
@@ -26,16 +27,6 @@ public class AnnouncementsAddRequest implements Serializable {
      * 公告文字
      */
     private String content;
-
-    /**
-     * 公告图片
-     */
-    private String image_url;
-
-    /**
-     * 发布的用户信息
-     */
-    private Long userId;
 
     private static final long serialVersionUID = 1L;
 }
