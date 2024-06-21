@@ -13,7 +13,7 @@ public interface QiNiuService {
      * @param multipartFile
      * @param fileType
      * @param filePrefix
-     * @return
+     * @return 文件的远程URL
      */
     String uploadQiNiu(MultipartFile multipartFile, String fileType,String filePrefix);
 

@@ -3,7 +3,7 @@ package com.yp.CXOJ.judge.codesandbox.model;
 import lombok.Data;
 
 /*
-* 判题信息
+* 判题信息,比如AC或者超时
 * */
 @Data
 public class JudgeInfo {

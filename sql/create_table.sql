@@ -12,18 +12,18 @@ create table if not exists user
     id           bigint auto_increment comment 'id' primary key,
     userAccount  varchar(256)                           not null comment '账号',
     userPassword varchar(512)                           not null comment '密码',
-    unionId      varchar(256)                           null comment '微信开放平台id',
+#     unionId      varchar(256)                           null comment '微信开放平台id',
     mpOpenId     varchar(256)                           null comment '公众号openId',
     userName     varchar(256)                           null comment '用户昵称',
     userAvatar   varchar(1024)                          null comment '用户头像',
+    address      varchar(1024)                          null comment '邮箱',
     userProfile  varchar(512)                           null comment '用户简介',
     userRole     varchar(256) default 'user'            not null comment '用户角色：user/admin/ban',
     createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete     tinyint      default 0                 not null comment '是否删除',
-    index idx_unionId (unionId)
+    isDelete     tinyint      default 0                 not null comment '是否删除'
+#     index idx_unionId (unionId)
 ) comment '用户' collate = utf8mb4_unicode_ci;
-
 -- 题目表
 create table if not exists question
 (
@@ -64,7 +64,7 @@ create table if not exists question_submit
 -- 此处使用索引（不把字符串设为索引,对于此处两个索引,在查询语句中分别对这两个字段单独查询,提高查询效率）
 
 -- 公告表
-CREATE TABLE Announcements
+CREATE TABLE if not exists Announcements
 (
     announcement_id   bigint auto_increment PRIMARY KEY comment '公告ID',
     announcement_type VARCHAR(256) default '比赛公告'        not null comment '公告类型',
@@ -80,42 +80,81 @@ CREATE TABLE Announcements
     foreign key (updated_user_id) references user (id) on delete no action
 ) comment '公告表' collate = utf8mb4_unicode_ci;
 
--- 帖子表
-create table if not exists post
+# todo-----------------------------------------add----------------------------------------------
+# 文章表
+drop table if exists articles;
+CREATE TABLE if not exists Articles
 (
-    id         bigint auto_increment comment 'id' primary key,
-    title      varchar(512)                       null comment '标题',
-    content    text                               null comment '内容',
-    tags       varchar(1024)                      null comment '标签列表（json 数组）',
-    thumbNum   int      default 0                 not null comment '点赞数',
-    favourNum  int      default 0                 not null comment '收藏数',
-    userId     bigint                             not null comment '创建用户 id',
-    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete   tinyint  default 0                 not null comment '是否删除',
-    index idx_userId (userId)
-) comment '帖子' collate = utf8mb4_unicode_ci;
+    article_id      bigint auto_increment PRIMARY KEY comment '文章ID',
+    article_title   varchar(512)                       not null comment '文章标题',
+    article_content TEXT                               not null comment '文章内容',
+    user_id         bigint                             not null comment '用户ID',
+    watch_count     int      default 0                 not null comment '观看数',
+    thumbs_count    int      default 0                 not null comment '点赞数',
+    collect_count   int      default 0                 not null comment '收藏数',
+    forward_count   int      default 0                 not null comment '转发数',
+    reply_count     int      default 0                 not null comment '回复数量',
+    create_time     datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time     datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    is_deleted      tinyint  default 0                 not null comment '是否删除'
+) comment '文章表' collate = utf8mb4_unicode_ci;
+# 评论表 todo 后面再添加，这里还有些问题
+drop table if exists comments;
+CREATE TABLE if not exists Comments
+(
+    comment_id        bigint auto_increment PRIMARY KEY comment '评论ID',
+    comment_content   TEXT                               not null comment '评论内容',
+    commenter_id      bigint                             not null comment '评论者ID',
+    commented_user_id bigint                             null comment '被评论者ID',
+    create_time       datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time       datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    parent_comment_id bigint                             null comment '父评论ID',
+    article_id        bigint                             null comment '文章id',
+    thumbs_count      int      default 0                 not null comment '点赞数',
+    forward_count     int      default 0                 not null comment '转发数',
+    reply_count       int      default 0                 not null comment '回复数量',
+    is_deleted        tinyint  default 0                 not null comment '是否删除',
+    index idx_parent_comment_id (parent_comment_id)
+) comment '评论表' collate = utf8mb4_unicode_ci;
 
--- 帖子点赞表（硬删除）
-create table if not exists post_thumb
+# 视频观看表
+CREATE TABLE if not exists video_watch
 (
-    id         bigint auto_increment comment 'id' primary key,
-    postId     bigint                             not null comment '帖子 id',
-    userId     bigint                             not null comment '创建用户 id',
-    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    index idx_postId (postId),
-    index idx_userId (userId)
-) comment '帖子点赞';
+    watch_id    bigint auto_increment PRIMARY KEY comment 'ID',
+    material_id bigint                             not null comment '视频id',# 对应资料里面的资料ID
+    user_id     bigint                             not null comment '观看用户ID',
+    watch_date  datetime default CURRENT_TIMESTAMP not null comment '开始观看日期',
+    is_deleted  tinyint  default 0                 not null comment '是否删除' # 如果视频被删除了，这里对应的数据也要软删除
+) comment '视频观看表' collate = utf8mb4_unicode_ci;
 
--- 帖子收藏表（硬删除）
-create table if not exists post_favour
+# 学习中心
+CREATE TABLE if not exists Learning_Materials
 (
-    id         bigint auto_increment comment 'id' primary key,
-    postId     bigint                             not null comment '帖子 id',
-    userId     bigint                             not null comment '创建用户 id',
-    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    index idx_postId (postId),
-    index idx_userId (userId)
-) comment '帖子收藏';
+    material_id     bigint auto_increment PRIMARY KEY comment '资料ID',
+    video_url       VARCHAR(1024)                      null comment '视频',
+    thumb_Num       int      default 0                 not null comment '视频点赞数',
+    favour_Num      int      default 0                 not null comment '视频收藏数',
+    share_Num       int      default 0                 not null comment '视频转发数',
+    watch_Num       bigint   default 0                 not null comment '视频观看数',
+    text_content    TEXT                               null comment '文字内容',
+    user_id         bigint                             not null comment '发布用户ID',
+    publish_date    datetime default CURRENT_TIMESTAMP not null comment '发布日期',
+    updated_user_id bigint                             not null comment '更新用户ID',
+    update_date     datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新日期',
+    is_deleted      tinyint  default 0                 not null comment '是否删除'
+) comment '学习中心表' collate = utf8mb4_unicode_ci;
+
+# 学习内容上传审核表
+CREATE TABLE if not exists Learning_materials_examine
+(
+    material_id     bigint auto_increment PRIMARY KEY comment '资料ID',
+    video_url       VARCHAR(1024)                      null comment '视频',
+    text_content    TEXT                               null comment '文字内容',
+    user_id         bigint                             not null comment '上传用户ID',
+    upload_date     datetime default CURRENT_TIMESTAMP not null comment '上传日期',
+    updated_user_id bigint                             not null comment '更新用户ID',
+    update_date     datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新日期',
+    is_deleted      tinyint  default 0                 not null comment '是否删除'
+) comment '学习内容上传审核表' collate = utf8mb4_unicode_ci;
+
+# todo-----------------------------------------end----------------------------------------------

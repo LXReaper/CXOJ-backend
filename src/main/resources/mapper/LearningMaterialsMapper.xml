@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yp.CXOJ.mapper.LearningMaterialsMapper">
+
+    <resultMap id="BaseResultMap" type="com.yp.CXOJ.model.entity.LearningMaterials">
+            <id property="material_id" column="material_id" jdbcType="BIGINT"/>
+            <result property="video_url" column="video_url" jdbcType="VARCHAR"/>
+            <result property="thumb_Num" column="thumb_Num" jdbcType="INTEGER"/>
+            <result property="favour_Num" column="favour_Num" jdbcType="INTEGER"/>
+            <result property="share_Num" column="share_Num" jdbcType="INTEGER"/>
+            <result property="watch_Num" column="watch_Num" jdbcType="BIGINT"/>
+            <result property="text_content" column="text_content" jdbcType="VARCHAR"/>
+            <result property="user_id" column="user_id" jdbcType="BIGINT"/>
+            <result property="publish_date" column="publish_date" jdbcType="TIMESTAMP"/>
+            <result property="updated_user_id" column="updated_user_id" jdbcType="BIGINT"/>
+            <result property="update_date" column="update_date" jdbcType="TIMESTAMP"/>
+            <result property="is_deleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        material_id,video_url,thumb_Num,
+        favour_Num,share_Num,watch_Num,
+        text_content,user_id,publish_date,
+        updated_user_id,update_date,is_deleted
+    </sql>
+</mapper>

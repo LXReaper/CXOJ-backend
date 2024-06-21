@@ -1,11 +1,17 @@
 package com.yp.CXOJ.model.dto.question;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /*
 * 题目配置
 * */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class JudgeConfig {
     /*
     * 时间限制(ms)

@@ -3,6 +3,7 @@ package com.yp.CXOJ.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yp.CXOJ.model.dto.user.UserQueryRequest;
+import com.yp.CXOJ.model.entity.LoginUser;
 import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.vo.LoginUserVO;
 import com.yp.CXOJ.model.vo.UserVO;
@@ -37,7 +38,7 @@ public interface UserService extends IService<User> {
     LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
     /**
-     * 用户登录（微信开放平台）
+     * 用户登录（微信开放平台）以后再搞
      *
      * @param wxOAuth2UserInfo 从微信获取的用户信息
      * @param request
@@ -102,6 +103,14 @@ public interface UserService extends IService<User> {
      * @return
      */
     LoginUserVO getLoginUserVO(User user);
+
+    /**
+     * 获取登录的用户信息
+     * @param user 登录用户原始信息
+     * @param request
+     * @return
+     */
+    LoginUser getLoginUserInfo(User user, HttpServletRequest request);
 
     /**
      * 获取脱敏的用户信息

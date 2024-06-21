@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yp.CXOJ.mapper.CommentsMapper">
+
+    <resultMap id="BaseResultMap" type="com.yp.CXOJ.model.entity.Comments">
+            <id property="comment_id" column="comment_id" jdbcType="BIGINT"/>
+            <result property="comment_content" column="comment_content" jdbcType="VARCHAR"/>
+            <result property="commenter_id" column="commenter_id" jdbcType="BIGINT"/>
+            <result property="commented_user_id" column="commented_user_id" jdbcType="BIGINT"/>
+            <result property="create_time" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="update_time" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="parent_comment_id" column="parent_comment_id" jdbcType="BIGINT"/>
+            <result property="article_id" column="article_id" jdbcType="BIGINT"/>
+            <result property="thumbs_count" column="thumbs_count" jdbcType="INTEGER"/>
+            <result property="forward_count" column="forward_count" jdbcType="INTEGER"/>
+            <result property="reply_count" column="reply_count" jdbcType="INTEGER"/>
+            <result property="is_deleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        comment_id
+        ,comment_content,commenter_id,
+        commented_user_id,create_time,update_time,
+        parent_comment_id,article_id,thumbs_count,forward_count,
+        reply_count,is_deleted
+    </sql>
+</mapper>

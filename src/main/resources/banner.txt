@@ -1,5 +1,6 @@
-Application Version: ${ruoyi.version}
+Application Version: ${yyp.version}
 Spring Boot Version: ${spring-boot.version}
+${AnsiColor.BRIGHT_YELLOW}
 By 余炎培YYP
                           ,-.----.
                           \    /  \

@@ -3,24 +3,32 @@ package com.yp.CXOJ.service.impl;
 import static com.yp.CXOJ.constant.UserConstant.USER_LOGIN_STATE;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yp.CXOJ.common.ErrorCode;
 import com.yp.CXOJ.constant.CommonConstant;
 import com.yp.CXOJ.exception.BusinessException;
+import com.yp.CXOJ.exception.ThrowUtils;
+import com.yp.CXOJ.manager.OnlineUserManager;
 import com.yp.CXOJ.mapper.UserMapper;
 import com.yp.CXOJ.model.dto.user.UserQueryRequest;
+import com.yp.CXOJ.model.entity.LoginUser;
 import com.yp.CXOJ.model.entity.User;
 import com.yp.CXOJ.model.enums.UserRoleEnum;
 import com.yp.CXOJ.model.vo.LoginUserVO;
 import com.yp.CXOJ.model.vo.UserVO;
 import com.yp.CXOJ.service.UserService;
 import com.yp.CXOJ.utils.SqlUtils;
+
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
 import me.chanjar.weixin.common.bean.WxOAuth2UserInfo;
 import org.apache.commons.lang3.StringUtils;
@@ -31,7 +39,6 @@ import org.springframework.util.DigestUtils;
 
 /**
  * 用户服务实现
- *
  */
 @Service
 @Slf4j
@@ -41,6 +48,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * 盐值，混淆密码
      */
     public static final String SALT = "yp";
+
+    /**
+     * 设置用户登录时间 => 1天
+     */
+    public static final int time = 24 * 60 * 60;
 
     @Autowired
     private UserMapper userMapper;// MyBatis的用户Mapper接口
@@ -73,8 +85,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
             // 3. 插入数据
             User user = new User();
+            user.setUserName("方块人" + UUID.randomUUID());
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
+            user.setUserAvatar("https://img.zcool.cn/community/01460b57e4a6fa0000012e7ed75e83.png?x-oss-process=image/auto-orient,1/resize,m_lfit,w_1280,limit_1/sharpen,100");
+            user.setUserProfile("这个人很神秘,什么都没有写");
             boolean saveResult = this.save(user);
             if (!saveResult) {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
@@ -109,10 +124,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 3. 记录用户的登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        request.getSession().setMaxInactiveInterval(time);//设置用户登录时间
+
+        LoginUser loginUser = getLoginUserInfo(user, request);
+        OnlineUserManager.addUser(loginUser,request);//添加为已登录用户
         return this.getLoginUserVO(user);
     }
 
 
+    /**
+     * 微信开放平台登录（以后再搞）
+     *
+     * @param wxOAuth2UserInfo 从微信获取的用户信息
+     * @param request
+     * @return
+     */
     @Override
     public LoginUserVO userLoginByMpOpen(WxOAuth2UserInfo wxOAuth2UserInfo, HttpServletRequest request) {
         String unionId = wxOAuth2UserInfo.getUnionId();
@@ -141,6 +167,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
             // 记录用户的登录态
             request.getSession().setAttribute(USER_LOGIN_STATE, user);
+            request.getSession().setMaxInactiveInterval(time);//设置用户登录时间
             return getLoginUserVO(user);
         }
     }
@@ -256,7 +283,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
         }
         // 移除登录态
+        OnlineUserManager.removeUser(((User) request.getSession().getAttribute(USER_LOGIN_STATE)).getId());
         request.getSession().removeAttribute(USER_LOGIN_STATE);
+        request.getSession().invalidate();//销毁session
         return true;
     }
 
@@ -267,7 +296,65 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtils.copyProperties(user, loginUserVO);
+        loginUserVO.setBindWx(StrUtil.isNotBlank(user.getMpOpenId()));
         return loginUserVO;
+    }
+
+    @Override
+    public LoginUser getLoginUserInfo(User user, HttpServletRequest request) {
+        if (user == null) {
+            return null;
+        }
+        LoginUser loginUser = new LoginUser();
+        BeanUtils.copyProperties(user, loginUser);
+        loginUser.setSessionId(request.getSession().getId());//设置sessionID
+        loginUser.setLoginTime(new Date(System.currentTimeMillis()));//设置登录时间
+        loginUser.setUserAgent(request.getHeader("User-Agent"));//设置登录的浏览器
+        loginUser.setRemoteAddr(getClientIpAddress(request));//设置登录ip
+        loginUser.setRemoteHost(request.getRemoteHost());//设置登录主机名
+        return loginUser;
+    }
+
+    //获取用户真实ip
+    public String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+//        System.out.println(ip);
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_CLUSTER_CLIENT_IP");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_FORWARDED_FOR");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_FORWARDED");
+//            System.out.println(ip);
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.yp.CXOJ.service.impl;
 
+import cn.hutool.json.JSONUtil;
 import com.google.gson.Gson;
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
@@ -87,6 +88,7 @@ public class QiNiuServiceImpl implements QiNiuService {
                 //put 方法
                 Response response = uploadManager.put(multipartFile.getInputStream(), key, upToken, null, null);
                 //解析上传成功的结果
+//                DefaultPutRet putRet1 = JSONUtil.toBean(response.bodyString(), DefaultPutRet.class);
                 DefaultPutRet putRet = new Gson().fromJson(response.bodyString(), DefaultPutRet.class);
                 System.out.println(response.bodyString());
                 System.out.println(putRet.key);

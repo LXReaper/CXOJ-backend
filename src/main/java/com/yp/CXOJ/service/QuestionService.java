@@ -6,6 +6,7 @@ import com.yp.CXOJ.model.dto.question.QuestionQueryRequest;
 import com.yp.CXOJ.model.entity.Question;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yp.CXOJ.model.vo.QuestionVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -22,6 +23,21 @@ public interface QuestionService extends IService<Question> {
      * @param add
      */
     void validQuestion(Question question, boolean add);
+
+    /**
+     * 使用爬虫获取的md数据添加题目
+     * @param request
+     * @return
+     */
+    Boolean addQuestionsFromMd(HttpServletRequest request);
+
+    /**
+     * 将文件中的数据作为题目添加
+     * @param files
+     * @param request
+     * @return
+     */
+    Boolean addQuestionsFromFiles(MultipartFile[] files,HttpServletRequest request);
 
     /**
      * 获取查询条件

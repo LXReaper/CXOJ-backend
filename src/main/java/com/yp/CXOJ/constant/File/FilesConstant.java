@@ -29,6 +29,10 @@ public class FilesConstant {
     public static final String ANNOUNCEMENTS_IMAGE_FILES = "myImage/announcements/";
 
     /**
+     * 用户头像文件的存放文件夹
+     */
+    public static final String USERS_AVATAR_FILES = "myImage/users/avatar/";
+    /**
      * 根目录
      */
     public static final String ROOT_FILES = "";

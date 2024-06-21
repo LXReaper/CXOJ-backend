@@ -22,7 +22,11 @@ public class JudgeManger {
     JudgeInfo doJudge(JudgeContext judgeContext){
         QuestionSubmit questionSubmit = judgeContext.getQuestionSubmit();
         String language = questionSubmit.getLanguage();
+        /**
+         * 判题策略，默认是默认判题策略
+         */
         JudgeStrategy judgeStrategy = new DefaultStrategyImpl();
+        //...使用不同的语言对应不同语言的判题策略
         if (language.equals("java")) judgeStrategy = new JavaLanguageStrategyImpl();
 
         return judgeStrategy.doJudge(judgeContext);

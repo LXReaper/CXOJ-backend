@@ -7,7 +7,8 @@ package com.yp.CXOJ.utils;
  */
 public class FilesUtil {
     // 图片允许的后缀扩展名
-    public static String[] IMAGE_FILE_VALID = new String[] { ".png", ".bmp", ".jpg", ".jpeg",".pdf" };
+    public static String[] IMAGE_FILE_VALID = new String[] { ".png", ".bmp", ".jpg", ".jpeg",".pdf" ,".webp" ,".gif"};
+    // 视频允许的后缀扩展名
     public static String[] VIDEO_FILE_VALID = new String[] { ".mp4", ".avi", ".mov", ".flv",".mkv" };
 
     /**

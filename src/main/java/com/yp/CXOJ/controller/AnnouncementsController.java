@@ -24,6 +24,7 @@ import com.yp.CXOJ.service.AnnouncementsService;
 import com.yp.CXOJ.service.QiNiuService;
 import com.yp.CXOJ.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -87,7 +88,7 @@ public class AnnouncementsController {
         Page<Announcements> announcementsPage = announcementsService.page(new Page<>(current, size),
                 announcementsService.getQueryWrapper(announcementsQueryRequest));
 
-        // 返回脱敏信息,如题目提交代码
+        // 返回脱敏信息,如题目提交代码announcements
         return ResultUtils.success(announcementsPage);
     }
 
@@ -119,7 +120,7 @@ public class AnnouncementsController {
         QueryWrapper<Announcements> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("announcement_id", announcement_id);
         Announcements announcements = announcementsService.getOne(queryWrapper);
-        if (announcements.getImage_url() != null && !announcements.getImage_url().isEmpty()){//有公告图片才删除
+        if (StringUtils.isNotBlank(announcements.getImage_url())) {//有公告图片才删除
             //新图片路径获取成功后才删除原来的图片文件(删除前先拿到存放在七牛云服务器中的文件名,通过文件路径拿到)
             qiNiuService.deleteFileOnQiNiu(announcements.getImage_url().substring(ossUrl.length()));
         }

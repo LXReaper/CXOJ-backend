@@ -86,9 +86,11 @@ public class JudgeServiceImpl implements JudgeService {
                 .build();
         ExecuteCodeResponse executeCodeResponse = codeSandBox.executeCode(executeCodeRequest);//代码沙箱执行返回的内容
 
-
         //获取代码沙箱执行代码后返回的结果
         List<String> outputList = executeCodeResponse.getOutputList();
+
+        // todo .....这里要补充一个将代码沙箱的执行信息写入最终的返回值中，其实也可以不用，就是一些编译，还有代码执行的信息，
+        //  的信息，可以直接就是在代码沙箱中将信息写入JudgeInfo中
 
         /**
          * 根据沙箱的执行结果，设置题目的判题状态和信息
@@ -97,14 +99,14 @@ public class JudgeServiceImpl implements JudgeService {
          */
         //上下文的作用
         JudgeContext judgeContext = new JudgeContext();
-        judgeContext.setJudgeInfo(executeCodeResponse.getJudgeInfo());
+        judgeContext.setJudgeInfo(executeCodeResponse.getJudgeInfo());//这里面有代码实际执行的时间，空间，编译信息等数据
         judgeContext.setInputList(inputList);
         judgeContext.setOutputList(outputList);
         judgeContext.setJudgeCaseList(judgeCaseList);
         judgeContext.setQuestion(question);
         judgeContext.setQuestionSubmit(questionSubmit);
 
-
+        //使用代码沙箱返回的执行结果，来实现判题，并返回判题信息（如判题成功AC）
         JudgeInfo judgeInfo = judgeManger.doJudge(judgeContext);
 
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yp.CXOJ.mapper.VideoWatchMapper">
+
+    <resultMap id="BaseResultMap" type="com.yp.CXOJ.model.entity.VideoWatch">
+            <id property="watch_id" column="watch_id" jdbcType="BIGINT"/>
+            <result property="material_id" column="material_id" jdbcType="BIGINT"/>
+            <result property="user_id" column="user_id" jdbcType="BIGINT"/>
+            <result property="watch_date" column="watch_date" jdbcType="TIMESTAMP"/>
+            <result property="is_deleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        watch_id,material_id,user_id,
+        watch_date,is_deleted
+    </sql>
+</mapper>

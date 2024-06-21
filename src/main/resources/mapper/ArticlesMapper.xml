@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yp.CXOJ.mapper.ArticlesMapper">
+
+    <resultMap id="BaseResultMap" type="com.yp.CXOJ.model.entity.Articles">
+            <id property="article_id" column="article_id" jdbcType="BIGINT"/>
+            <result property="article_title" column="article_title" jdbcType="VARCHAR"/>
+            <result property="article_content" column="article_content" jdbcType="VARCHAR"/>
+            <result property="user_id" column="user_id" jdbcType="BIGINT"/>
+            <result property="watch_count" column="watch_count" jdbcType="INTEGER"/>
+            <result property="thumbs_count" column="thumbs_count" jdbcType="INTEGER"/>
+            <result property="collect_count" column="collect_count" jdbcType="INTEGER"/>
+            <result property="forward_count" column="forward_count" jdbcType="INTEGER"/>
+            <result property="reply_count" column="reply_count" jdbcType="INTEGER"/>
+            <result property="create_time" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="update_time" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="is_deleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        article_id,article_title,article_content,user_id,
+        watch_count,thumbs_count,collect_count,
+        forward_count,reply_count,create_time,
+        update_time,is_deleted
+    </sql>
+</mapper>

@@ -33,7 +33,7 @@ public class WxOpenConfig {
         if (wxMpService != null) {
             return wxMpService;
         }
-        synchronized (this) {
+        synchronized (this) {//对象锁
             if (wxMpService != null) {
                 return wxMpService;
             }
