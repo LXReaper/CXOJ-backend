@@ -1,14 +1,19 @@
 package com.yp.CXOJ.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yp.CXOJ.common.ErrorCode;
 import com.yp.CXOJ.constant.CommonConstant;
+import com.yp.CXOJ.constant.UserConstant;
 import com.yp.CXOJ.exception.ThrowUtils;
 import com.yp.CXOJ.model.dto.comments.CommentAddRequest;
 import com.yp.CXOJ.model.dto.comments.CommentQueryRequest;
 import com.yp.CXOJ.model.dto.comments.CommentUpdateRequest;
+import com.yp.CXOJ.model.entity.Articles;
 import com.yp.CXOJ.model.entity.Comments;
+import com.yp.CXOJ.model.entity.User;
+import com.yp.CXOJ.service.ArticlesService;
 import com.yp.CXOJ.service.CommentsService;
 import com.yp.CXOJ.mapper.CommentsMapper;
 import com.yp.CXOJ.utils.SqlUtils;
@@ -16,7 +21,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
 * @author 余炎培
@@ -27,25 +35,49 @@ import java.util.List;
 public class CommentsServiceImpl extends ServiceImpl<CommentsMapper, Comments>
     implements CommentsService{
 
+    @Resource
+    private ArticlesService articlesService;
+
     /**
      * 新增评论
      * @param commentAddRequest
      * @return
      */
     @Override
-    public Long addComment(CommentAddRequest commentAddRequest) {
+    public Long addComment(CommentAddRequest commentAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(commentAddRequest == null, ErrorCode.PARAMS_ERROR,"请求参数为空");
+        ThrowUtils.throwIf(commentAddRequest.getArticle_id() == null
+                || commentAddRequest.getArticle_id() <= 0 ,ErrorCode.PARAMS_ERROR,"文章id不为空");
+        ThrowUtils.throwIf(commentAddRequest.getCommented_user_id() == null
+                || commentAddRequest.getCommented_user_id() <= 0 ,ErrorCode.PARAMS_ERROR,"被评论者id不为空");
+
+        User loginUser = (User) request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        ThrowUtils.throwIf(loginUser == null,ErrorCode.OPERATION_ERROR,"未登录");
+
+        //判断文章是否存在
+        QueryWrapper<Articles> queryWrapper1 = new QueryWrapper<>();
+        queryWrapper1.eq(commentAddRequest.getArticle_id() != null,"article_id", commentAddRequest.getArticle_id());
+        Articles articles = articlesService.getOne(queryWrapper1);
+        ThrowUtils.throwIf(articles == null,ErrorCode.NOT_FOUND_ERROR,"评论的文章不存在");
+
+        //更新文章的回复数
+        articles.setReply_count(articles.getReply_count() + 1);
+        articlesService.updateById(articles);
+
         //新增评论
         Comments comments = new Comments();
         BeanUtils.copyProperties(commentAddRequest, comments);
+        comments.setCommenter_id(loginUser.getId());
         boolean save = this.save(comments);
         ThrowUtils.throwIf(!save,ErrorCode.OPERATION_ERROR,"评论新增失败");
 
         //更新父评论的回复数
-        if (!commentAddRequest.getParent_comment_id().toString().isEmpty()
+        if (commentAddRequest.getParent_comment_id() != null &&
+        !commentAddRequest.getParent_comment_id().toString().isEmpty()
                 && commentAddRequest.getParent_comment_id() > 0) {
             QueryWrapper<Comments> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("parent_comment_id", commentAddRequest.getParent_comment_id());
+            queryWrapper.eq("comment_id",
+                    commentAddRequest.getParent_comment_id());
             Comments parentComment = this.getOne(queryWrapper);
 
             ThrowUtils.throwIf(parentComment == null,ErrorCode.PARAMS_ERROR,"父评论不存在");
@@ -72,8 +104,18 @@ public class CommentsServiceImpl extends ServiceImpl<CommentsMapper, Comments>
         //判断是否选择删除的评论是否存在
         ThrowUtils.throwIf(comment == null,ErrorCode.NOT_FOUND_ERROR,"选择删除的评论不存在");
 
+        //判断文章是否存在
+        QueryWrapper<Articles> queryWrapper1 = new QueryWrapper<>();
+        queryWrapper1.eq(comment.getArticle_id() != null,"article_id", comment.getArticle_id());
+        Articles articles = articlesService.getOne(queryWrapper1);
+        ThrowUtils.throwIf(articles == null,ErrorCode.NOT_FOUND_ERROR,"评论的文章不存在");
+
+        //更新文章的回复数
+        articles.setReply_count(articles.getReply_count() - 1);
+        articlesService.updateById(articles);
+
         //父评论减少回复数
-        if (!comment.getParent_comment_id().toString().isEmpty()
+        if (comment.getParent_comment_id() != null && !comment.getParent_comment_id().toString().isEmpty()
                 && comment.getParent_comment_id() > 0){
             wrapper = new QueryWrapper<>();
             wrapper.eq("parent_comment_id", comment.getParent_comment_id());
@@ -119,6 +161,38 @@ public class CommentsServiceImpl extends ServiceImpl<CommentsMapper, Comments>
         comment.setComment_content(commentUpdateRequest.getComment_content());
         boolean b = this.updateById(comment);
         return b;
+    }
+
+    @Override
+    public Page<Comments> listCommentsByPage(CommentQueryRequest commentQueryRequest) {
+        int current = commentQueryRequest.getCurrent();
+        int pageSize = commentQueryRequest.getPageSize();
+
+        //拿到请求中的所有信息
+        QueryWrapper<Comments> queryWrapper = this.getQueryWrapper(commentQueryRequest);
+        List<Comments> list = this.list(queryWrapper);
+
+        Page<Comments> commnetsPage = new Page<>(current, pageSize);
+        if (StringUtils.isAnyBlank(commentQueryRequest.getParent_comment_id().toString())) {
+            //拿到父评论的信息
+            List<Comments> parentCommentsList = list.stream()
+                    .filter(comment -> comment.getParent_comment_id() == null
+                            || comment.getParent_comment_id().toString().isEmpty())
+                    .limit(pageSize)
+                    .collect(Collectors.toList());
+            commnetsPage.setTotal(parentCommentsList.size());
+            commnetsPage.setRecords(parentCommentsList);
+        } else {
+            //拿到子评论的信息
+            List<Comments> childCommentsList = list.stream()
+                    .filter(comment -> comment.getParent_comment_id() != null
+                            && !comment.getParent_comment_id().toString().isEmpty())
+                    .limit(pageSize)
+                    .collect(Collectors.toList());
+            commnetsPage.setTotal(childCommentsList.size());
+            commnetsPage.setRecords(childCommentsList);
+        }
+        return commnetsPage;
     }
 
     // todo 这里得考虑考虑,因为有子评论，需要把子评论给用上

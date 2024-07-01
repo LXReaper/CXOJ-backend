@@ -35,7 +35,7 @@ public class CommentController {
     @PostMapping("/add")
     @ApiOperation("新增评论")
     public BaseResponse<Long> addComment(@RequestBody CommentAddRequest commentAddRequest, HttpServletRequest httpServletRequest) {
-        return ResultUtils.success(commentsService.addComment(commentAddRequest));
+        return ResultUtils.success(commentsService.addComment(commentAddRequest,httpServletRequest));
     }
 
     @PostMapping("/delete")
@@ -54,33 +54,6 @@ public class CommentController {
     @ApiOperation("展示评论")
     public BaseResponse<Page<Comments>> listCommentsByPage(@RequestBody CommentQueryRequest commentQueryRequest,
                                                            HttpServletRequest httpServletRequest) {
-        int current = commentQueryRequest.getCurrent();
-        int pageSize = commentQueryRequest.getPageSize();
-
-        //拿到请求中的所有信息
-        QueryWrapper<Comments> queryWrapper = commentsService.getQueryWrapper(commentQueryRequest);
-        List<Comments> list = commentsService.list(queryWrapper);
-
-        Page<Comments> commnetsPage = new Page<>(current, pageSize);
-        if (StringUtils.isAnyBlank(commentQueryRequest.getParent_comment_id().toString())) {
-            //拿到父评论的信息
-            List<Comments> parentCommentsList = list.stream()
-                    .filter(comment -> comment.getParent_comment_id() == null
-                            || comment.getParent_comment_id().toString().isEmpty())
-                    .limit(pageSize)
-                    .collect(Collectors.toList());
-            commnetsPage.setTotal(parentCommentsList.size());
-            commnetsPage.setRecords(parentCommentsList);
-        } else {
-            //拿到子评论的信息
-            List<Comments> childCommentsList = list.stream()
-                    .filter(comment -> comment.getParent_comment_id() != null
-                            && !comment.getParent_comment_id().toString().isEmpty())
-                    .limit(pageSize)
-                    .collect(Collectors.toList());
-            commnetsPage.setTotal(childCommentsList.size());
-            commnetsPage.setRecords(childCommentsList);
-        }
-        return ResultUtils.success(commnetsPage);
+        return ResultUtils.success(commentsService.listCommentsByPage(commentQueryRequest));
     }
 }

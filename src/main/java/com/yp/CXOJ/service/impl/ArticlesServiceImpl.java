@@ -1,21 +1,37 @@
 package com.yp.CXOJ.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yp.CXOJ.common.ErrorCode;
 import com.yp.CXOJ.constant.CommonConstant;
+import com.yp.CXOJ.constant.UserConstant;
 import com.yp.CXOJ.exception.ThrowUtils;
 import com.yp.CXOJ.model.dto.articles.ArticleAddRequest;
 import com.yp.CXOJ.model.dto.articles.ArticleQueryRequest;
 import com.yp.CXOJ.model.dto.articles.ArticleUpdateRequest;
 import com.yp.CXOJ.model.entity.Articles;
 import com.yp.CXOJ.model.entity.Comments;
+import com.yp.CXOJ.model.entity.User;
+import com.yp.CXOJ.model.vo.ArticlesVO;
+import com.yp.CXOJ.model.vo.CommentsVO;
 import com.yp.CXOJ.service.ArticlesService;
 import com.yp.CXOJ.mapper.ArticlesMapper;
+import com.yp.CXOJ.service.CommentsService;
+import com.yp.CXOJ.service.UserService;
 import com.yp.CXOJ.utils.SqlUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author 余炎培
@@ -26,6 +42,13 @@ import org.springframework.stereotype.Service;
 public class ArticlesServiceImpl extends ServiceImpl<ArticlesMapper, Articles>
         implements ArticlesService {
 
+    @Resource
+    private UserService userService;
+
+    @Resource
+    @Lazy
+    private CommentsService commentsService;
+
     /**
      * 添加公告
      *
@@ -33,14 +56,21 @@ public class ArticlesServiceImpl extends ServiceImpl<ArticlesMapper, Articles>
      * @return
      */
     @Override
-    public Long addArticle(ArticleAddRequest articleAddRequest) {
+    public Long addArticle(ArticleAddRequest articleAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(articleAddRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
         ThrowUtils.throwIf(StringUtils.isAnyBlank(articleAddRequest.getArticle_title()), ErrorCode.PARAMS_ERROR, "文章标题不能为空");
         ThrowUtils.throwIf(StringUtils.isAnyBlank(articleAddRequest.getArticle_content()), ErrorCode.PARAMS_ERROR, "文章内容不能为空");
+
+        //判断用户是否登录
+        User loginUser = (User) request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.OPERATION_ERROR, "未登录");
+
         Articles articles = new Articles();
         BeanUtils.copyProperties(articleAddRequest, articles);
+        articles.setUser_id(loginUser.getId());
         boolean save = this.save(articles);
         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "文章新增失败");
+
         return articles.getArticle_id();
     }
 
@@ -88,6 +118,85 @@ public class ArticlesServiceImpl extends ServiceImpl<ArticlesMapper, Articles>
         return b;
     }
 
+    @Override
+    public Page<ArticlesVO> listArticlesByPage(ArticleQueryRequest articleQueryRequest) {
+        long current = articleQueryRequest.getCurrent();
+        long size = articleQueryRequest.getPageSize();
+        //查到满足条件的articlesVO
+        QueryWrapper<Articles> queryWrapper = getQueryWrapper(articleQueryRequest);
+        List<Articles> articlesList = this.list(queryWrapper);
+        List<ArticlesVO> articlesVOList = articlesList.stream()
+                .limit(size)
+                .map(ArticlesVO::objToVO)
+                .sorted((o1, o2) -> {
+                    if (o1.getUser_id() == null || o2.getUser_id() == null)
+                        return o1.getArticle_id().compareTo(o2.getArticle_id());
+                    return o1.getUser_id() > o2.getUser_id() ? -1 : 1;
+                })
+                .collect(Collectors.toList());
+
+        Page<ArticlesVO> articlesVOPage = new Page<>(current, size);
+
+        for (int i = 0; i < articlesVOList.size(); ) {
+            QueryWrapper<User> queryWrapperUser = new QueryWrapper<>();
+            queryWrapperUser.eq(articlesVOList.get(i).getUser_id() != null, "id", articlesVOList.get(i).getUser_id());
+            User user = userService.getOne(queryWrapperUser);
+            //这只是为了减少重复查找数据库，提高性能
+            int j = i;
+            while (j < articlesVOList.size()
+                    && articlesVOList.get(j).getUser_id().equals(user.getId())) {
+                articlesVOList.get(j).setUserAvatar(user.getUserAvatar());
+                articlesVOList.get(j).setUserName(user.getUserName());
+
+                //拿到文章的所有回复信息
+                QueryWrapper<Comments> commentsQueryWrapper = new QueryWrapper<>();
+                commentsQueryWrapper.eq(articlesVOList.get(j).getArticle_id() != null, "article_id"
+                        , articlesVOList.get(j).getArticle_id());
+                List<CommentsVO> commentsList = commentsService.list(commentsQueryWrapper)
+                        .stream()
+                        .map(comments -> {
+                            CommentsVO commentsVO = CommentsVO.objToVO(comments);
+                            QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+                            userQueryWrapper.eq(commentsVO.getCommenter_id() != null, "id", commentsVO.getCommenter_id());
+                            User user1 = userService.getOne(userQueryWrapper);
+                            if (user1 != null) {
+                                commentsVO.setCommenterName(user1.getUserName());
+                                commentsVO.setCommenterAvatar(user1.getUserAvatar());
+                            }
+
+                            userQueryWrapper = new QueryWrapper<>();
+                            userQueryWrapper.eq(comments.getCommented_user_id() != null, "id", comments.getCommented_user_id());
+                            user1 = userService.getOne(userQueryWrapper);
+                            if (user1 != null) {
+                                commentsVO.setCommented_userName(user1.getUserName());
+                                commentsVO.setCommented_userAvatar(user1.getUserAvatar());
+                            }
+                            return commentsVO;
+                        })
+                        .sorted((o1,o2)-> o2.getUpdate_time().compareTo(o1.getUpdate_time()))//按更新时间倒序
+                        .collect(Collectors.toList());
+
+                articlesVOList.get(j).setCommentsList(commentsList);
+                ++j;
+            }
+            i = j;
+        }
+
+        //默认优先按更新时间倒序，后按观看数倒序
+        articlesVOList.sort((o1, o2) -> {
+            if (StringUtils.isAnyBlank(articleQueryRequest.getSortOrder())
+                    && articleQueryRequest.getSortOrder().equals(CommonConstant.SORT_ORDER_ASC))
+                return o1.getUpdate_time().compareTo(o2.getUpdate_time());
+            if (o1.getUpdate_time().compareTo(o2.getUpdate_time()) == 0)//时间相同
+                return o2.getWatch_count() - o1.getWatch_count();
+            return o2.getUpdate_time().compareTo(o1.getUpdate_time());
+        });
+
+        articlesVOPage.setRecords(articlesVOList);
+        articlesVOPage.setTotal(articlesList.size());
+        return articlesVOPage;
+    }
+
     /**
      * 获取分页条件
      *
@@ -112,7 +221,7 @@ public class ArticlesServiceImpl extends ServiceImpl<ArticlesMapper, Articles>
         QueryWrapper<Articles> queryWrapper = new QueryWrapper<>();
         queryWrapper.like(StringUtils.isNotBlank(article_title), "article_title", article_title);
         queryWrapper.like(StringUtils.isNotBlank(article_content), "article_content", article_content);
-        queryWrapper.eq( "user_id", user_id);
+        queryWrapper.eq(user_id != null, "user_id", user_id);
         queryWrapper.eq(watch_count != null, "watch_count", watch_count);
         queryWrapper.eq(thumbs_count != null, "thumbs_count", thumbs_count);
         queryWrapper.eq(collect_count != null, "collect_count", collect_count);

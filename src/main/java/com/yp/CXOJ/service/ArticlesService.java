@@ -1,6 +1,7 @@
 package com.yp.CXOJ.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yp.CXOJ.model.dto.articles.ArticleAddRequest;
 import com.yp.CXOJ.model.dto.articles.ArticleQueryRequest;
@@ -10,6 +11,9 @@ import com.yp.CXOJ.model.dto.comments.CommentUpdateRequest;
 import com.yp.CXOJ.model.dto.user.UserQueryRequest;
 import com.yp.CXOJ.model.entity.Articles;
 import com.yp.CXOJ.model.entity.User;
+import com.yp.CXOJ.model.vo.ArticlesVO;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
 * @author 余炎培
@@ -20,9 +24,10 @@ public interface ArticlesService extends IService<Articles> {
     /**
      * 添加文章
      * @param articleAddRequest
+     * @param request
      * @return
      */
-    Long addArticle(ArticleAddRequest articleAddRequest);
+    Long addArticle(ArticleAddRequest articleAddRequest, HttpServletRequest request);
 
     /**
      * 删除文章
@@ -37,6 +42,13 @@ public interface ArticlesService extends IService<Articles> {
      * @return
      */
     Boolean updateArticle(ArticleUpdateRequest articleUpdateRequest);
+
+    /**
+     * 分页展示文章
+     * @param articleQueryRequest
+     * @return
+     */
+    Page<ArticlesVO> listArticlesByPage(ArticleQueryRequest articleQueryRequest);
 
     /**
      * 获取分页查询条件

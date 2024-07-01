@@ -72,7 +72,6 @@ public class Comments implements Serializable {
     /**
      * 是否删除
      */
-    @TableLogic
     private Integer is_deleted;
 
     @TableField(exist = false)

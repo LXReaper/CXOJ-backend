@@ -109,12 +109,13 @@ CREATE TABLE if not exists Comments
     create_time       datetime default CURRENT_TIMESTAMP not null comment '创建时间',
     update_time       datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     parent_comment_id bigint                             null comment '父评论ID',
-    article_id        bigint                             null comment '文章id',
+    article_id        bigint                             not null comment '文章id',
     thumbs_count      int      default 0                 not null comment '点赞数',
     forward_count     int      default 0                 not null comment '转发数',
     reply_count       int      default 0                 not null comment '回复数量',
     is_deleted        tinyint  default 0                 not null comment '是否删除',
-    index idx_parent_comment_id (parent_comment_id)
+    index idx_parent_comment_id (parent_comment_id),
+    foreign key (article_id) references articles (article_id) on delete cascade
 ) comment '评论表' collate = utf8mb4_unicode_ci;
 
 # 视频观看表

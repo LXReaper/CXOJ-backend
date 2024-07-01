@@ -11,6 +11,7 @@ import com.yp.CXOJ.model.dto.comments.CommentUpdateRequest;
 import com.yp.CXOJ.model.entity.Articles;
 import com.yp.CXOJ.model.entity.Comments;
 import com.yp.CXOJ.model.entity.User;
+import com.yp.CXOJ.model.vo.ArticlesVO;
 import com.yp.CXOJ.service.ArticlesService;
 import com.yp.CXOJ.service.CommentsService;
 import io.swagger.annotations.ApiOperation;
@@ -38,7 +39,7 @@ public class ArticleController {
     @PostMapping("/add")
     @ApiOperation("新增文章")
     public BaseResponse<Long> addArticle(@RequestBody ArticleAddRequest articleAddRequest , HttpServletRequest httpServletRequest) {
-        return ResultUtils.success(articlesService.addArticle(articleAddRequest));
+        return ResultUtils.success(articlesService.addArticle(articleAddRequest,httpServletRequest));
     }
 
     @PostMapping("/delete")
@@ -55,12 +56,8 @@ public class ArticleController {
 
     @PostMapping("/list/page")
     @ApiOperation("分页展示文章")
-    public BaseResponse<Page<Articles>> listArticlesByPage(@RequestBody ArticleQueryRequest articleQueryRequest,
-                                                           HttpServletRequest httpServletRequest){
-        long current = articleQueryRequest.getCurrent();
-        long size = articleQueryRequest.getPageSize();
-        Page<Articles> articlesPage = articlesService.page(new Page<>(current, size),
-                articlesService.getQueryWrapper(articleQueryRequest));
-        return ResultUtils.success(articlesPage);
+    public BaseResponse<Page<ArticlesVO>> listArticlesByPage(@RequestBody ArticleQueryRequest articleQueryRequest,
+                                                             HttpServletRequest httpServletRequest){
+        return ResultUtils.success(articlesService.listArticlesByPage(articleQueryRequest));
     }
 }

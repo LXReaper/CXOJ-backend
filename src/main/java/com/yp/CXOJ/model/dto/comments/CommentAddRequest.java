@@ -16,10 +16,10 @@ public class CommentAddRequest implements Serializable {
      */
     private String comment_content;
 
-    /**
-     * 评论者ID
-     */
-    private Long commenter_id;
+//    /**
+//     * 评论者ID
+//     */
+//    private Long commenter_id;
 
     /**
      * 被评论者ID（比如@某人）

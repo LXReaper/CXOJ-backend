@@ -20,10 +20,10 @@ public class ArticleAddRequest implements Serializable {
      */
     private String article_content;
 
-    /**
-     * 用户ID
-     */
-    private Long user_id;
+//    /**
+//     * 用户ID
+//     */
+//    private Long user_id;
 
     private static final long serialVersionUID = 1L;
 }
