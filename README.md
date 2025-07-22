@@ -1,10 +1,16 @@
-# 数据库课设OJ项目
+<p align="center">
+    <img alt="Static Badge" src="https://img.shields.io/badge/JDK-1.8-blue">
+    <img alt="Static Badge" src="https://img.shields.io/badge/Spring%20Boot-2.7.2-blue">
+    <img alt="Static Badge" src="https://img.shields.io/badge/MySQL-8.0-blue"> 
+    <img alt="Static Badge" src="https://img.shields.io/badge/Redis-5.0%2B-blue"> 
+    <img alt="Static Badge" src="https://img.shields.io/badge/License-AGPL3.0-blue">
+</p>
+
+# CXOJ项目
 
 > 作者：yp
 
-基于 Java SpringBoot 的项目初始模板，整合了常用框架和主流业务的示例代码。
-
-只需 1 分钟即可完成内容网站的后端！！！大家还可以在此基础上快速开发自己的项目。
+基于 Java SpringBoot 的OJ项目
 
 [toc]
 
